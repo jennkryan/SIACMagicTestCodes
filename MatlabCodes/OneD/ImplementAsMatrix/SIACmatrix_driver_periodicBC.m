@@ -1,7 +1,7 @@
 
 %Takes FD data (POINT VALUES) and calculates filtered solution
 %In order to do so, it pretends it is a nodal DG solution with the same
-%nodes in each element
+%XNodes in each elemXent
 
 clear all
 close all
@@ -15,7 +15,7 @@ xleft = -1;
 xright = 1;
 xlength = xright - xleft;
 dx = (xright-xleft)/Nx;
-xmesh = xleft:dx:xright; % element interfaces -- row vector
+xmesh = xleft:dx:xright; % elemXent interfaces -- row vector
 
 % set approximation degree -- cannot choose if reading in data.
 degX = 2;
@@ -26,11 +26,11 @@ fexact = @(x) sin(pi.*x);
 DOFx = DGorderX*Nx;
 dXall = xlength/DOFx;
 
-% Local nodes
-%[Nodes,w]=JacobiGZW(DGorder,1.0,1.0);
-Nodes = (-1+(2.*((1:DGorderX)-1))/(DGorderX-1))'; %column vector
-% Global nodes
-Xall = xmesh(1:Nx)+(0.5*dx).*(Nodes+1); % all data points
+% Local XNodes
+%[XNodes,w]=JacobiGZW(DGorder,1.0,1.0);
+XNodes = (-1+(2.*((1:DGorderX)-1))/(DGorderX-1))'; %column vector
+% Global XNodes
+Xall = xmesh(1:Nx)+(0.5*dx).*(XNodes+1); % all data points
 Unode = fexact(Xall)+randn(size(Xall)).*dx^(DGorderX);
 
 
@@ -41,8 +41,8 @@ Unode = fexact(Xall)+randn(size(Xall)).*dx^(DGorderX);
 % Normally, you would read in y, and the function.  From the function, you would have
 
 % read in Xall = data location
-% read in Unode = data values -- assumes columns are elements, rows are
-% nodes.
+% read in Unode = data values -- assumes columns are elemXents, rows are
+% XNodes.
 % DOFx = size(Xall);    % Total number of given data points
 % dXall = Xall(2)-Xall(1); % distance between data points
 % DGinfo = divisors(Ny);
@@ -50,7 +50,7 @@ Unode = fexact(Xall)+randn(size(Xall)).*dx^(DGorderX);
 % %possible divisors
 % idof = ceil(length(DGinfo)/2); % number of possibilities
 % % DGinfo(1:floor(length(DGinfo)/2)) are possible polynomial degrees;
-% % DGinfo(ceil(length(DGinfo)/2):end) are possible number of elements
+% % DGinfo(ceil(length(DGinfo)/2):end) are possible number of elemXents
 % % Pairs: p=DOF(1), Nx=DOF(end); p=DOF(2), Nx=DOF(end-1),...
 % % Nx = DOF(numDiv+1-idof);
 % % DGorder = DOF(idof);
@@ -71,15 +71,15 @@ Unode = fexact(Xall)+randn(size(Xall)).*dx^(DGorderX);
 % xright = Xall(end);   % Determine right boundary
 % dx = (xright-xleft)/Nx; % mesh size
 % xmesh = xleft:dx:xright;
-% Assuming using same nodes in every element
-% Nodes(1:DGorderX) = (2/dx).*(Xall(1:DGorderX)-Xall(1))-1;
+% Assuming using same XNodes in every elemXent
+% XNodes(1:DGorderX) = (2/dx).*(Xall(1:DGorderX)-Xall(1))-1;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Global nodal mesh matrix
-xglobal = reshape(Xall,[DGorderX,Nx]); % reshape nodes so that each column gives all the points associated to an element.
+xglobal = reshape(Xall,[DGorderX,Nx]); % reshape XNodes so that each column gives all the points associated to an elemXent.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %!!!! UNCOMMENT THESE LINES IF READING IN DATA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -89,9 +89,9 @@ xglobal = reshape(Xall,[DGorderX,Nx]); % reshape nodes so that each column gives
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-Apxbasis = zeros(DGorderX,DGorderX); %(modes,nodes)
+Apxbasis = zeros(DGorderX,DGorderX); %(modes,XNodes)
 for m=1:DGorderX
-    Apxbasis(m,:) = legendreP(m-1,Nodes);
+    Apxbasis(m,:) = legendreP(m-1,XNodes);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,23 +127,23 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Construct Matrix for converting nodes to modes
-NtoM = zeros(DGorderX);
+% Construct Matrix for converting XNodes to modes
+NtoMx = zeros(DGorderX);
 for k=0:DGorderX-1 % Loop over Lagrange basis
-    basis = @(x) prod(x-Nodes(1:k))./prod(Nodes(k+1)-Nodes(1:k))*prod(x-Nodes(k+2:DGorderX))./prod(Nodes(k+1)-Nodes(k+2:DGorderX));
+    basis = @(x) prod(x-XNodes(1:k))./prod(XNodes(k+1)-XNodes(1:k))*prod(x-XNodes(k+2:DGorderX))./prod(XNodes(k+1)-XNodes(k+2:DGorderX));
     for m=0:DGorderX-1 % Loop over Legendre basis
-        NtoM(m+1,k+1) = integral(@(x) basis(x).*legendreP(m,x),-1,1,'ArrayValued',true)*(0.5*(2*m+1));
+        NtoMx(m+1,k+1) = integral(@(x) basis(x).*legendreP(m,x),-1,1,'ArrayValued',true)*(0.5*(2*m+1));
     end
 end
 uhat = zeros(DGorderX,Nx);
 for j=1:Nx
-    uhat(:,j) = NtoM*Unode(:,j);
+    uhat(:,j) = NtoMx*Unode(:,j);
 end
 
 
 uapprox = zeros(DGorderX,Nx);
-for j=1:Nx %elements
-    for k=1:DGorderX %nodes
+for j=1:Nx %elemXents
+    for k=1:DGorderX %XNodes
         uapprox(k,j) = Apxbasis(:,k)'*uhat(:,j);
     end
 end
@@ -161,75 +161,75 @@ hold on
 % 
 % %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % % STUFF FOR POSTPROCESSOR
-% % kernel width is moments + BSorder
+% % kernel width is moments + BSorderX
 % % full filter: smoothness = deg-1, moments = 2*deg'
 filterparam = 0;
 while strcmp(filterparam,'Y') == 0 && strcmp(filterparam,'N') == 0
     filterparam = input('Do you want to choose the filter parameters? (Y/N)  ',"s");
     if strcmp(filterparam,'Y') == 1
-        smoothness = input('Input smoothness/dissipation/number of continuous derivatives (>= -1): ');
-        moments = input('Input number of moments to satisfy (>=0, should be even. 2 moments preserves mean and variance):  ');
+        Xsmoothness = input('Input smoothness/dissipation/number of continuous derivatives (>= -1): ');
+        Xmoments = input('Input number of moments to satisfy (>=0, should be even. 2 moments preserves mean and variance):  ');
     elseif strcmp(filterparam,'N') == 1
-        smoothness = degX-1;
-        moments = 2*degX; 
+        Xsmoothness = degX-1;
+        Xmoments = 2*degX; 
     else
         disp(['ERROR: Please only answer Y if yes or N if no.'])
     end
 end
 % % Ensure an even number of moments.
-if mod(moments,2) ~= 0
-    moments = moments + 1;
+if mod(Xmoments,2) ~= 0
+    Xmoments = Xmoments + 1;
 end
-numsplines = moments + 1;
-BSorder = smoothness + 2;
-BSknots = (-BSorder/2:BSorder/2)';
-BSsupport = [floor(BSknots(1)),ceil(BSknots(BSorder+1))];
-BSlen = (BSsupport(2)-BSsupport(1))+1;
+X = Xmoments + 1;
+BSorderX = Xsmoothness + 2;
+BSknotsX = (-BSorderX/2:BSorderX/2)';
+BSSupportX = [floor(BSknotsX(1)),ceil(BSknotsX(BSorderX+1))];
+BSlenX = (BSSupportX(2)-BSSupportX(1))+1;
 
 
 
 
 % 
 % % Grab the symmetric SIAC weights
-CC = SIACcoeff(moments,smoothness);
+CCX = SIACcoeff(Xmoments,Xsmoothness);
 
-% disp(['Using ',num2str(moments+1),' B-Splines of order ',num2str(smoothness+2),'.'])
+% disp(['Using ',num2str(Xmoments+1),' B-Splines of order ',num2str(Xsmoothness+2),'.'])
 % disp('SIAC Kernel coefficients')
-% disp(CC)
+% disp(CCX)
 % 
 % % Calculate integrals of B-Splines
-[BSInt] = GrabIntegrals(smoothness, Nodes);
+[BSIntX] = GrabIntegrals(Xsmoothness, XNodes);
 
-kernellength = 2*ceil((moments + BSorder)/2) + 1;
-halfker = ceil((moments + BSorder)/2);
+kernellengthX = 2*ceil((Xmoments + BSorderX)/2) + 1;
+halfkerX = ceil((Xmoments + BSorderX)/2);
 
 % % % % SIAC eveluated at FD points
-SIACmatrix = zeros(DGorderX,kernellength,DGorderX);
+SIACmatrixX = zeros(DGorderX,kernellengthX,DGorderX);
 % % % % Post-processing matrix
-for k = 1:DGorderX % loop over nodes
-    for igam = 1:moments+1 % basis functions
-        SIACmatrix(:,igam:igam+BSlen-1,k) = SIACmatrix(:,igam:igam+BSlen-1,k)+CC(igam).*BSInt(:,1:BSlen,k);
+for k = 1:DGorderX % loop over XNodes
+    for igam = 1:Xmoments+1 % basis functions
+        SIACmatrixX(:,igam:igam+BSlenX-1,k) = SIACmatrixX(:,igam:igam+BSlenX-1,k)+CCX(igam).*BSIntX(:,1:BSlenX,k);
     end
 end
 % 
-% % Once we have the SIACmatrix, we can apply it to our modal coefficients:
+% % Once we have the SIACmatrixX, we can apply it to our modal coefficients:
 ustar = zeros(DGorderX,Nx);
-for elem = 1:Nx % assume we don't have a periodic solution so that we only post-process the interior elements
-    if elem < halfker+1
-        RIdx = elem + halfker;
-        LIdx = kernellength-RIdx;
-        V(:,(kernellength+1-RIdx):kernellength) = uhat(:,1:RIdx);
-        V(:,1:LIdx) = uhat(:,(Nx+1-LIdx):Nx);
-    elseif elem > Nx-halfker
-        RIdx = Nx+1-(elem-halfker);
-        LIdx = kernellength-RIdx;
-        V(:,1:RIdx) = uhat(:,(elem-halfker):Nx);
-        V(:,RIdx+1:kernellength) =  uhat(:,1:LIdx);
+for elemX = 1:Nx % assume we don't have a periodic solution so that we only post-process the interior elemXents
+    if elemX < halfkerX+1
+        RIdx = elemX + halfkerX;
+        LIdx = kernellengthX-RIdx;
+        VX(:,(kernellengthX+1-RIdx):kernellengthX) = uhat(:,1:RIdx);
+        VX(:,1:LIdx) = uhat(:,(Nx+1-LIdx):Nx);
+    elseif elemX > Nx-halfkerX
+        RIdx = Nx+1-(elemX-halfkerX);
+        LIdx = kernellengthX-RIdx;
+        VX(:,1:RIdx) = uhat(:,(elemX-halfkerX):Nx);
+        VX(:,RIdx+1:kernellengthX) =  uhat(:,1:LIdx);
     else
-        V = uhat(:,elem-halfker:elem+halfker);
+        VX = uhat(:,elemX-halfkerX:elemX+halfkerX);
     end
     for k = 1:DGorderX
-        ustar(k,elem) = sum(SIACmatrix(:,:,k).*V,'all');
+        ustar(k,elemX) = sum(SIACmatrixX(:,:,k).*VX,'all');
     end
 end
 
@@ -249,7 +249,7 @@ xlabel('x',FontSize=12)
 ylabel('log(|Error compared to exact|)',FontSize=12)
 title('log(|Error|)',FontSize=12,FontWeight='bold')
 
-disp(['Using N = ',num2str(Nx),' elements of order ',num2str(DGorderX)])
+disp(['Using N = ',num2str(Nx),' elemXents of order ',num2str(DGorderX)])
 disp(['DG error L-inf error:        ',num2str(max(abs(fexact(xglobal(:))- uapprox(:))))])
 disp(['Filtered error L-inf error:  ',num2str(max(abs(fexact(xglobal(:)) - ustar(:))))])
 
